@@ -18,11 +18,11 @@ class DynamicFilter
    */
   DynamicFilter(float aValues[],float bValues[],int baSize)
   {    
-    arrLen = baSize;
+    arrLen = baSize-1;
     oldx = new int[arrLen];
     oldy = new int[arrLen];
-    a = new float[arrLen];
-    b = new float[arrLen];
+    a = new float[baSize];
+    b = new float[baSize];
     
     for(int i = 0;i<arrLen;i++)
     {
@@ -31,6 +31,10 @@ class DynamicFilter
       oldx[i] = 0;
       oldy[i] = 0;
     }
+
+
+    a[arrLen] = aValues[arrLen];
+    b[arrLen] = bValues[arrLen];
   }
 
   ~DynamicFilter()
@@ -45,26 +49,32 @@ class DynamicFilter
    * When a new value is added, it performs the IIR filter
    */
  void addValue(int in)
-  {
+  {    
+    
+    float newY = in*b[0];// + oldx[0]*b[1] + oldx[1]*b[2] - oldy[0]*a[1] - oldy[1]*a[2];
+    
+    for(int i = arrLen;i>=1;i--)
+    {
+      newY += oldx[i-1]*b[i] - oldy[i-1]*a[i];
+    }
+
+
 
     for(int i = arrLen-1;i>=1;i--)
     {
       oldy[i] = oldy[i-1];
       oldx[i] = oldx[i-1];
     }
-    
-    
-    float newY = in*b[0];
-    
-    for(int i = arrLen-1;i>=1;i--)
-    {
-      newY += oldx[i-1]*b[i] - oldy[i-1]*a[i];
-    }
+
     oldy[0] = newY;
     oldx[0] = in;
-//    y_1 = in*b[0] + x_1*b[1] + x_2*b[2] - y_1*a[1] - y_2*a[2];  
-//    
-//    x_1 = in;
+
+
+//    float newy = in*b[0] + oldx[0]*b[1] + oldx[1]*b[2] - oldy[0]*a[1] - oldy[1]*a[2];
+//    oldy[1] = oldy[0];
+//    oldy[0] = newy;
+//    oldx[1] = oldx[0];
+//    oldx[0] = in;
   }
 
   /*
@@ -89,10 +99,9 @@ class DynamicFilter
 class Filter
 {
   private:
-    int *oldx;
-    int *oldy
-    float *a;
-    float *b;
+    int y_1,y_2,x_1,x_2;
+    float a[3];
+    float b[3];
 
     
   public:  
@@ -122,8 +131,9 @@ class Filter
    */
  void addValue(int in)
   {
+    float newy = in*b[0] + x_1*b[1] + x_2*b[2] - y_1*a[1] - y_2*a[2];  
     y_2 = y_1;
-    y_1 = in*b[0] + x_1*b[1] + x_2*b[2] - y_1*a[1] - y_2*a[2];  
+    y_1 = newy;
     x_2 = x_1;
     x_1 = in;
   }
@@ -159,10 +169,14 @@ int timer1_counter;
 //float a[3] = {1.0f,0.4905,0.5095}; //butter first order 50-70Hz notch filter
 //float b[3] = {0.7548,0.4905,0.7548};
 
-float a[3] = {1.0f,0.f,0.f}; //No Filter
-float b[3] = {1.f,0.f,0.f};
-Filter notchF(a,b);
+//float a[3] = {1.0f,0.f,0.f}; //No Filter
+//float b[3] = {1.f,0.f,0.f};
 
+float a[] = {1.0f, 1.0212, 1.4128, 0.6396, 0.4128}; //better second order 55-65Hz Notch filter
+float b[] = {0.6389, 0.8304, 1.5477, 0.8304, 0.6389};
+
+//Filter notchF(a,b);
+DynamicFilter notchF(a,b,5);
 
 //    int x_1=0;
 //    int x_2=0;
@@ -241,5 +255,6 @@ void loop() {
 //    x_2 = x_1;
 //    x_1 = in;
 //  }
+
 
 
